@@ -3,67 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Shootly - VoidGames</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <title>Shootly · VoidGames</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #000000;
-      --fg: #00ff41;
-      --dim: #008f11;
-      --accent: #ff0055;
+      --bg-base: #0a0a0c;
+      --bg-surface: #131317;
+      --bg-surface-hover: #1c1c22;
+      --border: #24242c;
+      --text-primary: #f4f4f6;
+      --text-secondary: #8e8e98;
+      --accent: #34d399;
+      --bonus: #f43f5e;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     body {
-      background: var(--bg);
-      color: var(--fg);
-      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      cursor: crosshair;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Filtro CRT Suave */
-    body.crt-active::after {
-      content: " ";
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-      background-size: 100% 4px;
-      pointer-events: none;
-      z-index: 99;
-      opacity: 0.6;
-    }
-
-    body.crt-active { 
-      text-shadow: 0 0 6px rgba(0, 255, 65, 0.4); 
-    }
-
+    /* Cabecera Minimalista */
     header {
+      width: 100%;
+      padding: 1rem 1.25rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 1rem;
-      border-bottom: 2px dashed var(--fg);
-      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 12, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 10;
-      background: var(--bg);
     }
 
-    a.back {
-      color: var(--fg);
+    .back-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
       text-decoration: none;
-      border: 1px solid var(--fg);
-      padding: 0.25rem 0.6rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 10px;
       font-size: 0.85rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
     }
 
-    a.back:hover { background: var(--fg); color: var(--bg); }
+    .back-btn:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-primary);
+      border-color: #363642;
+    }
 
-    .scores { display: flex; gap: 1.5rem; font-size: 1rem; }
+    .hud {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    .stat-value {
+      font-size: 1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+
+    .stat-value.accent {
+      color: var(--accent);
+    }
+
+    .combo-pill {
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.3rem 0.65rem;
+      border-radius: 99px;
+      font-variant-numeric: tabular-nums;
+      transition: transform 0.15s ease;
+    }
 
     canvas {
       flex: 1;
@@ -71,27 +120,30 @@
       height: 100%;
       display: block;
       touch-action: manipulation;
+      cursor: crosshair;
     }
   </style>
 </head>
 <body>
 
   <header>
-    <a href="../../index.html" class="back">← SALIR</a>
-    <div class="scores">
-      <span>COMBO: <span id="combo">1x</span></span>
-      <span>SCORE: <span id="score">0</span></span>
-      <span>M.SCORE: <span id="mscore">0</span></span>
+    <a href="../../index.html" class="back-btn">← Volver</a>
+    <div class="hud">
+      <span class="combo-pill" id="combo">1x</span>
+      <div class="stat">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Récord</span>
+        <span class="stat-value accent" id="mscore">0</span>
+      </div>
     </div>
   </header>
 
   <canvas id="game"></canvas>
 
   <script>
-    if (localStorage.getItem('voidgames_crt') !== 'false') {
-      document.body.classList.add('crt-active');
-    }
-
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
@@ -106,82 +158,84 @@
 
     let width, height;
     let targets = [];
-    let particles = [];
+    let ripples = [];
     let floatingTexts = [];
-    let pointer = { x: -100, y: -100 };
+    let pointer = { x: -100, y: -100, active: false };
     let lastSpawn = 0;
-    let spawnRate = 1100;
-    let flashError = 0;
-    let screenShake = 0;
+    let spawnRate = 1150;
+    let missFlash = 0;
 
-    // Web Audio API para efectos de sonido arcade
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playSound(freq, type, duration, vol = 0.08) {
+    // Audio limpio y suave con rampa de ganancia (sin chasquidos)
+    let audioCtx = null;
+    function playTone(freqStart, freqEnd, duration, vol = 0.05) {
+      if (localStorage.getItem('voidgames_music') === 'false') return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + duration);
-      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freqStart, now);
+      osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
     }
 
     function resize() {
-      width = canvas.width = canvas.clientWidth;
-      height = canvas.height = canvas.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
     }
     window.addEventListener('resize', resize);
     resize();
 
     function spawnTarget() {
-      const margin = 60;
-      // 15% de probabilidad de que aparezca un objetivo especial (más pequeño, da más puntos)
-      const isBonus = Math.random() < 0.15;
-      
+      const margin = 56;
+      const isBonus = Math.random() < 0.16;
+      const radius = isBonus ? 18 : 26;
+
       targets.push({
-        x: margin + Math.random() * (width - margin * 2),
-        y: margin + Math.random() * (height - margin * 2),
-        r: isBonus ? 18 : 28,
-        maxR: isBonus ? 18 : 28,
-        shrinkSpeed: (isBonus ? 0.22 : 0.12) + Math.min(score * 0.003, 0.2),
-        isBonus: isBonus,
-        color: isBonus ? '#ff0055' : '#00ff41'
+        x: margin + Math.random() * Math.max(20, width - margin * 2),
+        y: margin + Math.random() * Math.max(20, height - margin * 2),
+        r: radius,
+        maxR: radius,
+        shrinkSpeed: (isBonus ? 0.19 : 0.11) + Math.min(score * 0.0025, 0.18),
+        isBonus,
+        color: isBonus ? '#f43f5e' : '#34d399'
       });
     }
 
-    function addParticles(x, y, color) {
-      for (let i = 0; i < 10; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 1 + Math.random() * 4;
-        particles.push({
-          x, y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 1,
-          color: color
-        });
-      }
+    function addRipple(x, y, color) {
+      ripples.push({ x, y, r: 8, alpha: 0.7, color });
     }
 
-    function addFloatingText(text, x, y) {
-      floatingTexts.push({ text, x, y, life: 1 });
+    function addFloatingText(text, x, y, color) {
+      floatingTexts.push({ text, x, y, alpha: 1, color });
     }
 
     function resetRun() {
-      combo = 1;
-      comboEl.textContent = combo + 'x';
+      if (score > 0 || combo > 1) {
+        missFlash = 0.22;
+        playTone(180, 75, 0.25, 0.07);
+      }
       score = 0;
-      spawnRate = 1100;
+      combo = 1;
+      spawnRate = 1150;
       targets = [];
-      flashError = 10;
-      screenShake = 12;
       scoreEl.textContent = score;
-      playSound(100, 'sawtooth', 0.3, 0.12);
+      comboEl.textContent = '1x';
     }
 
     function shoot(x, y) {
@@ -192,18 +246,18 @@
       for (let i = targets.length - 1; i >= 0; i--) {
         const t = targets[i];
         const dist = Math.hypot(x - t.x, y - t.y);
-        
+
         if (dist <= t.r + 12) {
           targets.splice(i, 1);
-          addParticles(t.x, t.y, t.color);
-          
-          const pointsEarned = t.isBonus ? 3 * combo : 1 * combo;
-          score += pointsEarned;
-          addFloatingText(`+${pointsEarned}`, t.x, t.y);
-          
+          addRipple(t.x, t.y, t.color);
+
+          const points = (t.isBonus ? 3 : 1) * combo;
+          score += points;
+          addFloatingText(`+${points}`, t.x, t.y - 10, t.color);
+
           combo = Math.min(combo + 1, 10);
-          comboEl.textContent = combo + 'x';
           scoreEl.textContent = score;
+          comboEl.textContent = `${combo}x`;
 
           if (score > mscore) {
             mscore = score;
@@ -211,8 +265,8 @@
             localStorage.setItem(STORAGE_KEY, mscore);
           }
 
-          spawnRate = Math.max(400, 1100 - score * 15);
-          playSound(t.isBonus ? 880 : 580, 'square', 0.12);
+          spawnRate = Math.max(420, 1150 - score * 14);
+          playTone(t.isBonus ? 740 : 520, t.isBonus ? 1100 : 780, 0.14, 0.05);
           hit = true;
           break;
         }
@@ -224,9 +278,16 @@
     }
 
     canvas.addEventListener('pointermove', e => {
-      const rect = canvas.getBoundingClientRect();
-      pointer.x = e.clientX - rect.left;
-      pointer.y = e.clientY - rect.top;
+      if (e.pointerType === 'mouse') {
+        const rect = canvas.getBoundingClientRect();
+        pointer.x = e.clientX - rect.left;
+        pointer.y = e.clientY - rect.top;
+        pointer.active = true;
+      }
+    });
+
+    canvas.addEventListener('pointerleave', () => {
+      pointer.active = false;
     });
 
     canvas.addEventListener('pointerdown', e => {
@@ -235,91 +296,106 @@
     });
 
     function loop(timestamp) {
-      ctx.save();
-
-      // Aplicar efecto de sacudida (Screen Shake) si hubo fallo
-      if (screenShake > 0) {
-        const shakeX = (Math.random() - 0.5) * screenShake;
-        const shakeY = (Math.random() - 0.5) * screenShake;
-        ctx.translate(shakeX, shakeY);
-        screenShake *= 0.85;
-      }
-
-      ctx.fillStyle = flashError > 0 ? '#1a0005' : '#000000';
-      if (flashError > 0) flashError--;
+      // Fondo base
+      ctx.fillStyle = '#0a0a0c';
       ctx.fillRect(0, 0, width, height);
 
-      // Generar objetivos
+      // Cuadrícula de puntos sutil de fondo
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      const step = 36;
+      for (let gx = step; gx < width; gx += step) {
+        for (let gy = step; gy < height; gy += step) {
+          ctx.fillRect(gx, gy, 1.5, 1.5);
+        }
+      }
+
+      // Destello suave al fallar
+      if (missFlash > 0.005) {
+        ctx.fillStyle = `rgba(244, 63, 94, ${missFlash})`;
+        ctx.fillRect(0, 0, width, height);
+        missFlash *= 0.88;
+      }
+
+      // Aparición de objetivos
       if (timestamp - lastSpawn > spawnRate || targets.length === 0) {
         spawnTarget();
         lastSpawn = timestamp;
       }
 
-      // Actualizar y dibujar objetivos
+      // Dibujar objetivos
       for (let i = targets.length - 1; i >= 0; i--) {
         const t = targets[i];
         t.r -= t.shrinkSpeed;
 
-        if (t.r <= 3) {
+        if (t.r <= 4) {
           resetRun();
           break;
         }
 
-        ctx.strokeStyle = t.color;
-        ctx.fillStyle = t.color;
-        ctx.lineWidth = t.isBonus ? 3 : 2;
-
+        // Relleno translúcido suave
         ctx.beginPath();
         ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+        ctx.fillStyle = t.isBonus ? 'rgba(244, 63, 94, 0.14)' : 'rgba(52, 211, 153, 0.12)';
+        ctx.fill();
+
+        // Aro exterior
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = t.color;
         ctx.stroke();
 
+        // Núcleo central
         ctx.beginPath();
-        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = t.color;
         ctx.fill();
       }
 
-      // Dibujar partículas
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.04;
-        if (p.life <= 0) {
-          particles.splice(i, 1);
+      // Ondas de impacto (Ripples)
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += 2.4;
+        rp.alpha -= 0.035;
+        if (rp.alpha <= 0) {
+          ripples.splice(i, 1);
           continue;
         }
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 3, 3);
+        ctx.save();
+        ctx.globalAlpha = rp.alpha;
+        ctx.strokeStyle = rp.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
 
-      // Dibujar textos flotantes de puntuación
-      ctx.font = 'bold 14px Inter';
+      // Textos flotantes de puntos
+      ctx.font = '600 13px Inter, sans-serif';
+      ctx.textAlign = 'center';
       for (let i = floatingTexts.length - 1; i >= 0; i--) {
         const ft = floatingTexts[i];
-        ft.y -= 1;
-        ft.life -= 0.03;
-        if (ft.life <= 0) {
+        ft.y -= 0.9;
+        ft.alpha -= 0.025;
+        if (ft.alpha <= 0) {
           floatingTexts.splice(i, 1);
           continue;
         }
-        ctx.fillStyle = `rgba(0, 255, 65, ${ft.life})`;
+        ctx.save();
+        ctx.globalAlpha = ft.alpha;
+        ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
       }
 
-      // Mira en pantalla
-      if (pointer.x > 0 && pointer.y > 0) {
-        ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)';
-        ctx.lineWidth = 1.5;
+      // Mira minimalista en escritorio
+      if (pointer.active) {
+        ctx.strokeStyle = 'rgba(244, 244, 246, 0.35)';
+        ctx.lineWidth = 1.25;
         ctx.beginPath();
         ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2);
-        ctx.moveTo(pointer.x - 20, pointer.y);
-        ctx.lineTo(pointer.x + 20, pointer.y);
-        ctx.moveTo(pointer.x, pointer.y - 20);
-        ctx.lineTo(pointer.x, pointer.y + 20);
         ctx.stroke();
       }
 
-      ctx.restore();
       requestAnimationFrame(loop);
     }
 
