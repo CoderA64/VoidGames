@@ -5,229 +5,406 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VoidGames</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #000000;
-      --fg: #00ff41;
-      --dim: #008f11;
+      --bg-base: #0a0a0c;
+      --bg-surface: #131317;
+      --bg-surface-hover: #1c1c22;
+      --border: #24242c;
+      --text-primary: #f4f4f6;
+      --text-secondary: #8e8e98;
+      --accent: #34d399;
+      --accent-dim: rgba(52, 211, 153, 0.12);
+      --radius: 14px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     body {
-      background-color: var(--bg);
-      color: var(--fg);
-      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      padding: 1rem;
-      overflow-x: hidden;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Filtro CRT Suave */
-    body.crt-active::after {
-      content: " ";
-      display: block;
-      position: fixed;
-      top: 0; left: 0; bottom: 0; right: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-      z-index: 999;
-      background-size: 100% 4px;
-      pointer-events: none;
-      opacity: 0.6;
-    }
-
-    body.crt-active { 
-      text-shadow: 0 0 6px rgba(0, 255, 65, 0.4); 
-    }
-
-    .divider {
-      border-top: 2px dashed var(--fg);
-      border-bottom: 2px dashed var(--fg);
-      padding: 0.75rem 0;
+    /* Cabecera Minimalista */
+    header {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+
+    .brand {
       font-weight: 700;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
     }
 
     .icon-btn {
-      background: none;
-      border: 1px solid transparent;
-      color: var(--fg);
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 0.25rem 0.5rem;
-      transition: border-color 0.2s;
-    }
-
-    .icon-btn:hover { border-color: var(--fg); }
-
-    main {
-      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem 0;
-      gap: 1rem;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-surface-hover);
+      color: var(--text-primary);
+      border-color: #363642;
+    }
+
+    /* Contenedor Principal */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1rem 1.25rem 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .game-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
     }
 
     .game-card {
-      width: 100%;
-      max-width: 480px;
-      border: 1px solid var(--fg);
-      padding: 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.4rem;
       text-decoration: none;
-      color: var(--fg);
+      color: var(--text-primary);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: background 0.15s, color 0.15s;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
     .game-card:hover {
-      background: var(--fg);
-      color: var(--bg);
+      background: var(--bg-surface-hover);
+      border-color: #383844;
+      transform: translateY(-2px);
     }
 
-    .game-info h2 { font-size: 1.2rem; margin-bottom: 0.25rem; }
-    .game-info p { font-size: 0.85rem; opacity: 0.85; }
+    .game-card:active {
+      transform: translateY(0);
+    }
 
+    .game-info h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+      letter-spacing: -0.01em;
+    }
+
+    .game-info p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .play-pill {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 99px;
+      transition: background 0.2s ease, color 0.2s ease;
+      white-space: nowrap;
+      margin-left: 1rem;
+    }
+
+    .game-card:hover .play-pill {
+      background: var(--accent);
+      color: #051b11;
+    }
+
+    /* Footer */
     footer {
-      border-top: 2px dashed var(--fg);
-      border-bottom: 2px dashed var(--fg);
-      padding: 0.75rem 0;
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem;
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
     }
 
-    /* Modales */
+    /* Modales Modernos */
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.92);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: 1.25rem;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
-    .modal.open { display: flex; }
+    .modal.open {
+      display: flex;
+      opacity: 1;
+    }
 
     .modal-box {
-      border: 2px solid var(--fg);
-      background: var(--bg);
-      padding: 1.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.75rem;
       width: 100%;
-      max-width: 400px;
-      text-align: center;
+      max-width: 380px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.25rem;
-      border-bottom: 1px solid var(--fg);
-      padding-bottom: 0.5rem;
-      text-align: left;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-header h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.2rem;
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      color: var(--text-primary);
     }
 
     .setting-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
-      text-align: left;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
     }
 
-    button.toggle, .btn-action {
-      background: var(--bg);
-      color: var(--fg);
-      border: 1px solid var(--fg);
-      padding: 0.5rem 1rem;
-      font-family: inherit;
+    .setting-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .setting-desc {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+    }
+
+    /* Switch Toggle Moderno */
+    .switch-btn {
+      background: #24242c;
+      border: none;
+      width: 48px;
+      height: 26px;
+      border-radius: 99px;
+      position: relative;
       cursor: pointer;
-      font-weight: 700;
+      transition: background 0.25s ease;
     }
 
-    button.toggle.active, .btn-action.primary {
-      background: var(--fg);
-      color: var(--bg);
+    .switch-btn::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      transition: transform 0.25s ease, background 0.25s ease;
+    }
+
+    .switch-btn.active {
+      background: var(--accent);
+    }
+
+    .switch-btn.active::after {
+      transform: translateX(22px);
+      background: #051b11;
+    }
+
+    /* Botones de Bienvenida */
+    .welcome-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      text-align: center;
     }
 
     .welcome-text {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      text-align: center;
       margin-bottom: 1.5rem;
-      line-height: 1.5;
-      font-size: 0.95rem;
     }
 
-    .welcome-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
+    .welcome-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--bg-surface-hover);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #051b11;
+      border-color: var(--accent);
+    }
+
+    .btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    .score-badge {
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
-<body class="crt-active">
+<body>
 
-  <!-- Modal de Bienvenida (Primera Vez) -->
+  <!-- Modal Bienvenida -->
   <div class="modal" id="modal-welcome">
     <div class="modal-box">
-      <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0.5rem;">
-        <h3>> CONFIGURACIÓN INICIAL</h3>
-      </div>
-      <p class="welcome-text">Bienvenido a VoidGames.<br>¿Deseas activar la música chiptune de fondo para la experiencia arcade?</p>
-      <div class="welcome-buttons">
-        <button class="btn-action" id="welcome-no">NO [OFF]</button>
-        <button class="btn-action primary" id="welcome-yes">SÍ [ON]</button>
+      <h3 class="welcome-title">Bienvenido a VoidGames</h3>
+      <p class="welcome-text">¿Deseas activar el sonido ambiental minimalista mientras exploras el catálogo?</p>
+      <div class="welcome-actions">
+        <button class="btn" id="welcome-no">Silenciar</button>
+        <button class="btn primary" id="welcome-yes">Activar</button>
       </div>
     </div>
   </div>
 
-  <header class="divider">
-    <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
-    <span>Void Games</span>
-    <button class="icon-btn" id="btn-records" title="Récords">★</button>
+  <!-- Cabecera -->
+  <header>
+    <button class="icon-btn" id="btn-settings" aria-label="Ajustes" title="Ajustes">⚙</button>
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>VoidGames</span>
+    </div>
+    <button class="icon-btn" id="btn-records" aria-label="Récords" title="Récords">★</button>
   </header>
 
-  <main id="game-list">
-    <p>Cargando sistema...</p>
+  <!-- Catálogo -->
+  <main>
+    <div class="section-label">Colección Casual</div>
+    <div class="game-grid" id="game-list">
+      <p style="color: var(--text-secondary); font-size: 0.9rem;">Cargando catálogo...</p>
+    </div>
   </main>
 
+  <!-- Pie -->
   <footer>
-    Licencia AGPL v3
+    Licencia AGPL v3 · Modo Offline Disponible
   </footer>
 
   <!-- Modal Ajustes -->
   <div class="modal" id="modal-settings">
-    <div class="modal-box" style="text-align: left;">
+    <div class="modal-box">
       <div class="modal-header">
-        <h3>AJUSTES</h3>
-        <button class="icon-btn" onclick="closeModals()">✕</button>
+        <h3>Ajustes</h3>
+        <button class="close-btn" onclick="closeModals()">✕</button>
       </div>
       <div class="setting-row">
-        <span>Filtro CRT</span>
-        <button class="toggle active" id="toggle-crt">ON</button>
-      </div>
-      <div class="setting-row">
-        <span>Música Arcade (Synth)</span>
-        <button class="toggle" id="toggle-music">OFF</button>
+        <div>
+          <span>Audio Ambiental</span>
+          <span class="setting-desc">Sintetizador suave en el menú</span>
+        </div>
+        <button class="switch-btn" id="toggle-music" aria-label="Alternar audio"></button>
       </div>
     </div>
   </div>
 
   <!-- Modal Récords -->
   <div class="modal" id="modal-records">
-    <div class="modal-box" style="text-align: left;">
+    <div class="modal-box">
       <div class="modal-header">
-        <h3>RÉCORDS (M.SCORE)</h3>
-        <button class="icon-btn" onclick="closeModals()">✕</button>
+        <h3>Mejores Puntuaciones</h3>
+        <button class="close-btn" onclick="closeModals()">✕</button>
       </div>
       <div id="records-list"></div>
     </div>
@@ -237,13 +414,12 @@
     let gamesData = [];
     let audioCtx = null;
     let musicInterval = null;
-    const notes = [110, 110, 146.83, 130.81, 164.81, 146.83, 130.81, 98]; 
+    // Acordes ambientales suaves (ondas triangulares/senoidales)
+    const notes = [261.63, 329.63, 392.00, 493.88, 392.00, 329.63]; 
     let step = 0;
 
     const musicBtn = document.getElementById('toggle-music');
-    const crtBtn = document.getElementById('toggle-crt');
 
-    // Parser minimalista para games.toml
     function parseTomlGames(text) {
       const blocks = text.split('[[games]]').slice(1);
       return blocks.map(block => {
@@ -265,36 +441,42 @@
 
         container.innerHTML = '';
         gamesData.forEach(game => {
+          const best = localStorage.getItem(`voidgames_mscore_${game.id}`);
+          const scoreSub = best ? ` · Récord: ${best}` : '';
+          
           const a = document.createElement('a');
           a.href = game.path;
           a.className = 'game-card';
           a.innerHTML = `
             <div class="game-info">
-              <h2>> ${game.title}</h2>
-              <p>${game.description || ''}</p>
+              <h2>${game.title}</h2>
+              <p>${game.description || ''}${scoreSub}</p>
             </div>
-            <span>[JUGAR]</span>
+            <span class="play-pill">Jugar</span>
           `;
           container.appendChild(a);
         });
       } catch (e) {
-        container.innerHTML = '<p>Error cargando games.toml. Ejecuta en un servidor local.</p>';
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">No se pudo cargar games.toml. Ejecuta desde un servidor local.</p>';
       }
     }
 
-    // --- Sistema de Audio ---
-    function playStep() {
+    // Audio Ambiental Minimalista (Onda senoidal suave)
+    function playAmbientNote() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'square';
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+      
+      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.03, audioCtx.currentTime + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.8);
+      
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.19);
+      osc.stop(audioCtx.currentTime + 1.9);
       step++;
     }
 
@@ -302,10 +484,10 @@
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       if (!musicInterval) {
-        musicInterval = setInterval(playStep, 220);
+        playAmbientNote();
+        musicInterval = setInterval(playAmbientNote, 1600);
       }
       musicBtn.classList.add('active');
-      musicBtn.textContent = 'ON';
       localStorage.setItem('voidgames_music', 'true');
     }
 
@@ -315,7 +497,6 @@
         musicInterval = null;
       }
       musicBtn.classList.remove('active');
-      musicBtn.textContent = 'OFF';
       localStorage.setItem('voidgames_music', 'false');
     }
 
@@ -327,40 +508,21 @@
       }
     });
 
-    // --- Gestión de Ajustes y Estado inicial ---
-    // 1. CRT
-    const savedCrt = localStorage.getItem('voidgames_crt');
-    if (savedCrt === 'false') {
-      document.body.classList.remove('crt-active');
-      crtBtn.classList.remove('active');
-      crtBtn.textContent = 'OFF';
-    }
-
-    crtBtn.addEventListener('click', () => {
-      const isActive = document.body.classList.toggle('crt-active');
-      crtBtn.classList.toggle('active', isActive);
-      crtBtn.textContent = isActive ? 'ON' : 'OFF';
-      localStorage.setItem('voidgames_crt', isActive);
-    });
-
-    // 2. Comprobar si es la primera vez (para el prompt de música)
+    // Configuración Inicial
     const isConfigured = localStorage.getItem('voidgames_configured');
     const modalWelcome = document.getElementById('modal-welcome');
 
     if (!isConfigured) {
       modalWelcome.classList.add('open');
-    } else {
-      // Si ya estaba configurado, cargamos el estado de la música guardado
-      if (localStorage.getItem('voidgames_music') === 'true') {
-        // Se activará al primer toque del usuario para cumplir con las políticas del navegador
-        const enableOnInteraction = () => {
-          if (localStorage.getItem('voidgames_music') === 'true' && !musicInterval) {
-            startMusic();
-          }
-          window.removeEventListener('pointerdown', enableOnInteraction);
-        };
-        window.addEventListener('pointerdown', enableOnInteraction);
-      }
+    } else if (localStorage.getItem('voidgames_music') === 'true') {
+      musicBtn.classList.add('active');
+      const enableOnInteraction = () => {
+        if (localStorage.getItem('voidgames_music') === 'true' && !musicInterval) {
+          startMusic();
+        }
+        window.removeEventListener('pointerdown', enableOnInteraction);
+      };
+      window.addEventListener('pointerdown', enableOnInteraction);
     }
 
     document.getElementById('welcome-yes').addEventListener('click', () => {
@@ -375,7 +537,7 @@
       modalWelcome.classList.remove('open');
     });
 
-    // --- Modales de Ajustes y Récords ---
+    // Modales
     document.getElementById('btn-settings').onclick = () => {
       document.getElementById('modal-settings').classList.add('open');
     };
@@ -384,8 +546,13 @@
       const list = document.getElementById('records-list');
       list.innerHTML = gamesData.map(g => {
         const best = localStorage.getItem(`voidgames_mscore_${g.id}`) || 0;
-        return `<div class="setting-row"><span>${g.title}</span><strong>${best} PTS</strong></div>`;
-      }).join('') || '<p>Sin juegos registrados.</p>';
+        return `
+          <div class="setting-row">
+            <span>${g.title}</span>
+            <span class="score-badge">${best} pts</span>
+          </div>
+        `;
+      }).join('') || '<p style="color: var(--text-secondary); font-size: 0.9rem;">Sin juegos registrados.</p>';
       document.getElementById('modal-records').classList.add('open');
     };
 
@@ -393,7 +560,17 @@
       document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
     }
 
+    // Cerrar modales al hacer clic fuera de la tarjeta
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal && modal.id !== 'modal-welcome') {
+          closeModals();
+        }
+      });
+    });
+
     loadGames();
   </script>
 </body>
-</html>
+      </html>
+      
