@@ -26,20 +26,22 @@
       overflow-x: hidden;
     }
 
-    /* Filtro CRT */
+    /* Filtro CRT Suave */
     body.crt-active::after {
       content: " ";
       display: block;
       position: fixed;
       top: 0; left: 0; bottom: 0; right: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
-                  linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
       z-index: 999;
-      background-size: 100% 3px, 6px 100%;
+      background-size: 100% 4px;
       pointer-events: none;
+      opacity: 0.6;
     }
 
-    body.crt-active { text-shadow: 0 0 4px var(--dim); }
+    body.crt-active { 
+      text-shadow: 0 0 6px rgba(0, 255, 65, 0.4); 
+    }
 
     .divider {
       border-top: 2px dashed var(--fg);
@@ -108,8 +110,8 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.9);
-      z-index: 100;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 1000;
       align-items: center;
       justify-content: center;
       padding: 1rem;
@@ -123,6 +125,7 @@
       padding: 1.5rem;
       width: 100%;
       max-width: 400px;
+      text-align: center;
     }
 
     .modal-header {
@@ -132,6 +135,7 @@
       margin-bottom: 1.25rem;
       border-bottom: 1px solid var(--fg);
       padding-bottom: 0.5rem;
+      text-align: left;
     }
 
     .setting-row {
@@ -139,25 +143,52 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
+      text-align: left;
     }
 
-    button.toggle {
+    button.toggle, .btn-action {
       background: var(--bg);
       color: var(--fg);
       border: 1px solid var(--fg);
-      padding: 0.35rem 0.75rem;
+      padding: 0.5rem 1rem;
       font-family: inherit;
       cursor: pointer;
+      font-weight: 700;
     }
 
-    button.toggle.active {
+    button.toggle.active, .btn-action.primary {
       background: var(--fg);
       color: var(--bg);
-      font-weight: 700;
+    }
+
+    .welcome-text {
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .welcome-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
     }
   </style>
 </head>
 <body class="crt-active">
+
+  <!-- Modal de Bienvenida (Primera Vez) -->
+  <div class="modal" id="modal-welcome">
+    <div class="modal-box">
+      <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0.5rem;">
+        <h3>> CONFIGURACIÓN INICIAL</h3>
+      </div>
+      <p class="welcome-text">Bienvenido a VoidGames.<br>¿Deseas activar la música chiptune de fondo para la experiencia arcade?</p>
+      <div class="welcome-buttons">
+        <button class="btn-action" id="welcome-no">NO [OFF]</button>
+        <button class="btn-action primary" id="welcome-yes">SÍ [ON]</button>
+      </div>
+    </div>
+  </div>
 
   <header class="divider">
     <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
@@ -175,7 +206,7 @@
 
   <!-- Modal Ajustes -->
   <div class="modal" id="modal-settings">
-    <div class="modal-box">
+    <div class="modal-box" style="text-align: left;">
       <div class="modal-header">
         <h3>AJUSTES</h3>
         <button class="icon-btn" onclick="closeModals()">✕</button>
@@ -193,7 +224,7 @@
 
   <!-- Modal Récords -->
   <div class="modal" id="modal-records">
-    <div class="modal-box">
+    <div class="modal-box" style="text-align: left;">
       <div class="modal-header">
         <h3>RÉCORDS (M.SCORE)</h3>
         <button class="icon-btn" onclick="closeModals()">✕</button>
@@ -204,6 +235,13 @@
 
   <script>
     let gamesData = [];
+    let audioCtx = null;
+    let musicInterval = null;
+    const notes = [110, 110, 146.83, 130.81, 164.81, 146.83, 130.81, 98]; 
+    let step = 0;
+
+    const musicBtn = document.getElementById('toggle-music');
+    const crtBtn = document.getElementById('toggle-crt');
 
     // Parser minimalista para games.toml
     function parseTomlGames(text) {
@@ -244,29 +282,7 @@
       }
     }
 
-    // Gestión de Ajustes y CRT
-    const crtBtn = document.getElementById('toggle-crt');
-    const savedCrt = localStorage.getItem('voidgames_crt');
-    if (savedCrt === 'false') {
-      document.body.classList.remove('crt-active');
-      crtBtn.classList.remove('active');
-      crtBtn.textContent = 'OFF';
-    }
-
-    crtBtn.addEventListener('click', () => {
-      const isActive = document.body.classList.toggle('crt-active');
-      crtBtn.classList.toggle('active', isActive);
-      crtBtn.textContent = isActive ? 'ON' : 'OFF';
-      localStorage.setItem('voidgames_crt', isActive);
-    });
-
-    // Sintetizador Chiptune Offline (Web Audio API)
-    let audioCtx = null;
-    let musicInterval = null;
-    const musicBtn = document.getElementById('toggle-music');
-    const notes = [110, 110, 146.83, 130.81, 164.81, 146.83, 130.81, 98]; // Bajo retro en La menor
-    let step = 0;
-
+    // --- Sistema de Audio ---
     function playStep() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
@@ -282,22 +298,84 @@
       step++;
     }
 
-    musicBtn.addEventListener('click', () => {
+    function startMusic() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       if (!musicInterval) {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         musicInterval = setInterval(playStep, 220);
-        musicBtn.classList.add('active');
-        musicBtn.textContent = 'ON';
-      } else {
+      }
+      musicBtn.classList.add('active');
+      musicBtn.textContent = 'ON';
+      localStorage.setItem('voidgames_music', 'true');
+    }
+
+    function stopMusic() {
+      if (musicInterval) {
         clearInterval(musicInterval);
         musicInterval = null;
-        musicBtn.classList.remove('active');
-        musicBtn.textContent = 'OFF';
+      }
+      musicBtn.classList.remove('active');
+      musicBtn.textContent = 'OFF';
+      localStorage.setItem('voidgames_music', 'false');
+    }
+
+    musicBtn.addEventListener('click', () => {
+      if (!musicInterval) {
+        startMusic();
+      } else {
+        stopMusic();
       }
     });
 
-    // Modales
+    // --- Gestión de Ajustes y Estado inicial ---
+    // 1. CRT
+    const savedCrt = localStorage.getItem('voidgames_crt');
+    if (savedCrt === 'false') {
+      document.body.classList.remove('crt-active');
+      crtBtn.classList.remove('active');
+      crtBtn.textContent = 'OFF';
+    }
+
+    crtBtn.addEventListener('click', () => {
+      const isActive = document.body.classList.toggle('crt-active');
+      crtBtn.classList.toggle('active', isActive);
+      crtBtn.textContent = isActive ? 'ON' : 'OFF';
+      localStorage.setItem('voidgames_crt', isActive);
+    });
+
+    // 2. Comprobar si es la primera vez (para el prompt de música)
+    const isConfigured = localStorage.getItem('voidgames_configured');
+    const modalWelcome = document.getElementById('modal-welcome');
+
+    if (!isConfigured) {
+      modalWelcome.classList.add('open');
+    } else {
+      // Si ya estaba configurado, cargamos el estado de la música guardado
+      if (localStorage.getItem('voidgames_music') === 'true') {
+        // Se activará al primer toque del usuario para cumplir con las políticas del navegador
+        const enableOnInteraction = () => {
+          if (localStorage.getItem('voidgames_music') === 'true' && !musicInterval) {
+            startMusic();
+          }
+          window.removeEventListener('pointerdown', enableOnInteraction);
+        };
+        window.addEventListener('pointerdown', enableOnInteraction);
+      }
+    }
+
+    document.getElementById('welcome-yes').addEventListener('click', () => {
+      localStorage.setItem('voidgames_configured', 'true');
+      startMusic();
+      modalWelcome.classList.remove('open');
+    });
+
+    document.getElementById('welcome-no').addEventListener('click', () => {
+      localStorage.setItem('voidgames_configured', 'true');
+      stopMusic();
+      modalWelcome.classList.remove('open');
+    });
+
+    // --- Modales de Ajustes y Récords ---
     document.getElementById('btn-settings').onclick = () => {
       document.getElementById('modal-settings').classList.add('open');
     };
