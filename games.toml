@@ -1,0 +1,7 @@
+# Índice de juegos de VoidGames
+
+[[games]]
+id = "shootly"
+title = "Shootly"
+description = "Apunta y dispara a los objetivos antes de que desaparezcan."
+path = "games/shootly/index.html"
