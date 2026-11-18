@@ -38,7 +38,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Cabecera Minimalista */
     header {
       width: 100%;
       max-width: 640px;
@@ -87,7 +86,6 @@
       border-color: #363642;
     }
 
-    /* Contenedor Principal */
     main {
       flex: 1;
       width: 100%;
@@ -97,15 +95,6 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-    }
-
-    .section-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
     }
 
     .game-grid {
@@ -166,7 +155,6 @@
       color: #051b11;
     }
 
-    /* Footer */
     footer {
       width: 100%;
       max-width: 640px;
@@ -178,7 +166,6 @@
       border-top: 1px solid var(--border);
     }
 
-    /* Modales Modernos */
     .modal {
       display: none;
       position: fixed;
@@ -257,7 +244,6 @@
       margin-top: 0.15rem;
     }
 
-    /* Switch Toggle Moderno */
     .switch-btn {
       background: #24242c;
       border: none;
@@ -290,7 +276,6 @@
       background: #051b11;
     }
 
-    /* Botones de Bienvenida */
     .welcome-title {
       font-size: 1.15rem;
       font-weight: 600;
@@ -334,10 +319,6 @@
       border-color: var(--accent);
     }
 
-    .btn.primary:hover {
-      opacity: 0.9;
-    }
-
     .score-badge {
       font-weight: 600;
       color: var(--accent);
@@ -366,12 +347,11 @@
       <span class="brand-dot"></span>
       <span>VoidGames</span>
     </div>
-    <button class="icon-btn" id="btn-records" aria-label="Récords" title="Récords">★</button>
+    <button class="icon-btn" id="btn-records" aria-label="Récords" title="Récords (High Scores)">★</button>
   </header>
 
   <!-- Catálogo -->
   <main>
-    <div class="section-label">Colección Casual</div>
     <div class="game-grid" id="game-list">
       <p style="color: var(--text-secondary); font-size: 0.9rem;">Cargando catálogo...</p>
     </div>
@@ -414,7 +394,6 @@
     let gamesData = [];
     let audioCtx = null;
     let musicInterval = null;
-    // Acordes ambientales suaves (ondas triangulares/senoidales)
     const notes = [261.63, 329.63, 392.00, 493.88, 392.00, 329.63]; 
     let step = 0;
 
@@ -461,21 +440,24 @@
       }
     }
 
-    // Audio Ambiental Minimalista (Onda senoidal suave)
+    // Audio ambiental con rampa de ganancia limpia (evita chasquidos y ruido roto)
     function playAmbientNote() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
+      
       osc.type = 'sine';
       osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
       
-      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.03, audioCtx.currentTime + 0.4);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.8);
+      // Envolvente limpia: subida y bajada graduales de volumen
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.025, audioCtx.currentTime + 0.6);
+      gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 1.8);
       
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      osc.start();
+      
+      osc.start(audioCtx.currentTime);
       osc.stop(audioCtx.currentTime + 1.9);
       step++;
     }
@@ -508,7 +490,6 @@
       }
     });
 
-    // Configuración Inicial
     const isConfigured = localStorage.getItem('voidgames_configured');
     const modalWelcome = document.getElementById('modal-welcome');
 
@@ -537,7 +518,6 @@
       modalWelcome.classList.remove('open');
     });
 
-    // Modales
     document.getElementById('btn-settings').onclick = () => {
       document.getElementById('modal-settings').classList.add('open');
     };
@@ -560,7 +540,6 @@
       document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
     }
 
-    // Cerrar modales al hacer clic fuera de la tarjeta
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal && modal.id !== 'modal-welcome') {
@@ -572,5 +551,4 @@
     loadGames();
   </script>
 </body>
-      </html>
-      
+</html>
