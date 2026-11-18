@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Shootly - VoidGames</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --fg: #00ff41;
+      --dim: #008f11;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    body.crt-active::after {
+      content: " ";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+      background-size: 100% 3px;
+      pointer-events: none;
+      z-index: 99;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px dashed var(--fg);
+      font-weight: 700;
+      z-index: 10;
+    }
+
+    a.back {
+      color: var(--fg);
+      text-decoration: none;
+      border: 1px solid var(--fg);
+      padding: 0.25rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    a.back:hover { background: var(--fg); color: var(--bg); }
+
+    .scores { display: flex; gap: 1.5rem; font-size: 1rem; }
+
+    canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="../../index.html" class="back">← SALIR</a>
+    <div class="scores">
+      <span>SCORE: <span id="score">0</span></span>
+      <span>M.SCORE: <span id="mscore">0</span></span>
+    </div>
+  </header>
+
+  <canvas id="game"></canvas>
+
+  <script>
+    // Sincronizar filtro CRT con el menú principal
+    if (localStorage.getItem('voidgames_crt') !== 'false') {
+      document.body.classList.add('crt-active');
+    }
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const mscoreEl = document.getElementById('mscore');
+
+    const STORAGE_KEY = 'voidgames_mscore_shootly';
+    let score = 0;
+    let mscore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
+    mscoreEl.textContent = mscore;
+
+    let width, height;
+    let targets = [];
+    let particles = [];
+    let pointer = { x: -100, y: -100 };
+    let lastSpawn = 0;
+    let spawnRate = 1200; // ms entre objetivos
+    let flashError = 0;
+
+    // Audio minimalista de disparo/acierto
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(freq, type, duration) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + duration);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function resize() {
+      width = canvas.width = canvas.clientWidth;
+      height = canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function spawnTarget() {
+      const margin = 50;
+      const maxRadius = Math.min(width, height) < 500 ? 34 : 28;
+      targets.push({
+        x: margin + Math.random() * (width - margin * 2),
+        y: margin + Math.random() * (height - margin * 2),
+        r: maxRadius,
+        maxR: maxRadius,
+        shrinkSpeed: 0.14 + Math.min(score * 0.004, 0.25) // Acelera progresivamente
+      });
+    }
+
+    function addParticles(x, y) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 / 8) * i;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * (2 + Math.random() * 2),
+          vy: Math.sin(angle) * (2 + Math.random() * 2),
+          life: 1
+        });
+      }
+    }
+
+    function resetRun() {
+      score = 0;
+      spawnRate = 1200;
+      targets = [];
+      flashError = 12;
+      scoreEl.textContent = score;
+      playSound(120, 'sawtooth', 0.25);
+    }
+
+    function shoot(x, y) {
+      pointer.x = x;
+      pointer.y = y;
+
+      let hit = false;
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const t = targets[i];
+        const dist = Math.hypot(x - t.x, y - t.y);
+        // Margen generoso de impacto para pantallas táctiles
+        if (dist <= t.r + 10) {
+          targets.splice(i, 1);
+          addParticles(t.x, t.y);
+          score++;
+          scoreEl.textContent = score;
+
+          if (score > mscore) {
+            mscore = score;
+            mscoreEl.textContent = mscore;
+            localStorage.setItem(STORAGE_KEY, mscore);
+          }
+
+          spawnRate = Math.max(450, 1200 - score * 18);
+          playSound(620, 'square', 0.1);
+          hit = true;
+          break;
+        }
+      }
+
+      if (!hit) {
+        resetRun();
+      }
+    }
+
+    canvas.addEventListener('pointermove', e => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = e.clientX - rect.left;
+      pointer.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('pointerdown', e => {
+      const rect = canvas.getBoundingClientRect();
+      shoot(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    function loop(timestamp) {
+      // Fondo con flash si hubo fallo
+      ctx.fillStyle = flashError > 0 ? '#1a0000' : '#000000';
+      if (flashError > 0) flashError--;
+      ctx.fillRect(0, 0, width, height);
+
+      // Generar nuevos objetivos
+      if (timestamp - lastSpawn > spawnRate || targets.length === 0) {
+        spawnTarget();
+        lastSpawn = timestamp;
+      }
+
+      // Dibujar y actualizar objetivos
+      ctx.strokeStyle = '#00ff41';
+      ctx.fillStyle = '#00ff41';
+      ctx.lineWidth = 2;
+
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const t = targets[i];
+        t.r -= t.shrinkSpeed;
+
+        if (t.r <= 4) {
+          // Si un punto desaparece sin dispararle, se reinicia la racha
+          resetRun();
+          break;
+        }
+
+        // Anillo exterior
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Punto central
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Partículas de impacto
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.fillRect(p.x, p.y, 3, 3);
+      }
+
+      // Mira telescópica en PC
+      if (pointer.x > 0 && pointer.y > 0) {
+        ctx.strokeStyle = 'rgba(0, 255, 65, 0.75)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 16, 0, Math.PI * 2);
+        ctx.moveTo(pointer.x - 24, pointer.y);
+        ctx.lineTo(pointer.x + 24, pointer.y);
+        ctx.moveTo(pointer.x, pointer.y - 24);
+        ctx.lineTo(pointer.x, pointer.y + 24);
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
