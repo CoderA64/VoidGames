@@ -10,6 +10,7 @@
       --bg: #000000;
       --fg: #00ff41;
       --dim: #008f11;
+      --accent: #ff0055;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -25,14 +26,20 @@
       cursor: crosshair;
     }
 
+    /* Filtro CRT Suave */
     body.crt-active::after {
       content: " ";
       position: fixed;
       inset: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
-      background-size: 100% 3px;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+      background-size: 100% 4px;
       pointer-events: none;
       z-index: 99;
+      opacity: 0.6;
+    }
+
+    body.crt-active { 
+      text-shadow: 0 0 6px rgba(0, 255, 65, 0.4); 
     }
 
     header {
@@ -43,6 +50,7 @@
       border-bottom: 2px dashed var(--fg);
       font-weight: 700;
       z-index: 10;
+      background: var(--bg);
     }
 
     a.back {
@@ -71,6 +79,7 @@
   <header>
     <a href="../../index.html" class="back">← SALIR</a>
     <div class="scores">
+      <span>COMBO: <span id="combo">1x</span></span>
       <span>SCORE: <span id="score">0</span></span>
       <span>M.SCORE: <span id="mscore">0</span></span>
     </div>
@@ -79,7 +88,6 @@
   <canvas id="game"></canvas>
 
   <script>
-    // Sincronizar filtro CRT con el menú principal
     if (localStorage.getItem('voidgames_crt') !== 'false') {
       document.body.classList.add('crt-active');
     }
@@ -88,30 +96,34 @@
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const mscoreEl = document.getElementById('mscore');
+    const comboEl = document.getElementById('combo');
 
     const STORAGE_KEY = 'voidgames_mscore_shootly';
     let score = 0;
+    let combo = 1;
     let mscore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
     mscoreEl.textContent = mscore;
 
     let width, height;
     let targets = [];
     let particles = [];
+    let floatingTexts = [];
     let pointer = { x: -100, y: -100 };
     let lastSpawn = 0;
-    let spawnRate = 1200; // ms entre objetivos
+    let spawnRate = 1100;
     let flashError = 0;
+    let screenShake = 0;
 
-    // Audio minimalista de disparo/acierto
+    // Web Audio API para efectos de sonido arcade
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playSound(freq, type, duration) {
+    function playSound(freq, type, duration, vol = 0.08) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + duration);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + duration);
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
       gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -127,36 +139,49 @@
     resize();
 
     function spawnTarget() {
-      const margin = 50;
-      const maxRadius = Math.min(width, height) < 500 ? 34 : 28;
+      const margin = 60;
+      // 15% de probabilidad de que aparezca un objetivo especial (más pequeño, da más puntos)
+      const isBonus = Math.random() < 0.15;
+      
       targets.push({
         x: margin + Math.random() * (width - margin * 2),
         y: margin + Math.random() * (height - margin * 2),
-        r: maxRadius,
-        maxR: maxRadius,
-        shrinkSpeed: 0.14 + Math.min(score * 0.004, 0.25) // Acelera progresivamente
+        r: isBonus ? 18 : 28,
+        maxR: isBonus ? 18 : 28,
+        shrinkSpeed: (isBonus ? 0.22 : 0.12) + Math.min(score * 0.003, 0.2),
+        isBonus: isBonus,
+        color: isBonus ? '#ff0055' : '#00ff41'
       });
     }
 
-    function addParticles(x, y) {
-      for (let i = 0; i < 8; i++) {
-        const angle = (Math.PI * 2 / 8) * i;
+    function addParticles(x, y, color) {
+      for (let i = 0; i < 10; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
         particles.push({
           x, y,
-          vx: Math.cos(angle) * (2 + Math.random() * 2),
-          vy: Math.sin(angle) * (2 + Math.random() * 2),
-          life: 1
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          color: color
         });
       }
     }
 
+    function addFloatingText(text, x, y) {
+      floatingTexts.push({ text, x, y, life: 1 });
+    }
+
     function resetRun() {
+      combo = 1;
+      comboEl.textContent = combo + 'x';
       score = 0;
-      spawnRate = 1200;
+      spawnRate = 1100;
       targets = [];
-      flashError = 12;
+      flashError = 10;
+      screenShake = 12;
       scoreEl.textContent = score;
-      playSound(120, 'sawtooth', 0.25);
+      playSound(100, 'sawtooth', 0.3, 0.12);
     }
 
     function shoot(x, y) {
@@ -167,11 +192,17 @@
       for (let i = targets.length - 1; i >= 0; i--) {
         const t = targets[i];
         const dist = Math.hypot(x - t.x, y - t.y);
-        // Margen generoso de impacto para pantallas táctiles
-        if (dist <= t.r + 10) {
+        
+        if (dist <= t.r + 12) {
           targets.splice(i, 1);
-          addParticles(t.x, t.y);
-          score++;
+          addParticles(t.x, t.y, t.color);
+          
+          const pointsEarned = t.isBonus ? 3 * combo : 1 * combo;
+          score += pointsEarned;
+          addFloatingText(`+${pointsEarned}`, t.x, t.y);
+          
+          combo = Math.min(combo + 1, 10);
+          comboEl.textContent = combo + 'x';
           scoreEl.textContent = score;
 
           if (score > mscore) {
@@ -180,8 +211,8 @@
             localStorage.setItem(STORAGE_KEY, mscore);
           }
 
-          spawnRate = Math.max(450, 1200 - score * 18);
-          playSound(620, 'square', 0.1);
+          spawnRate = Math.max(400, 1100 - score * 15);
+          playSound(t.isBonus ? 880 : 580, 'square', 0.12);
           hit = true;
           break;
         }
@@ -204,69 +235,91 @@
     });
 
     function loop(timestamp) {
-      // Fondo con flash si hubo fallo
-      ctx.fillStyle = flashError > 0 ? '#1a0000' : '#000000';
+      ctx.save();
+
+      // Aplicar efecto de sacudida (Screen Shake) si hubo fallo
+      if (screenShake > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShake;
+        const shakeY = (Math.random() - 0.5) * screenShake;
+        ctx.translate(shakeX, shakeY);
+        screenShake *= 0.85;
+      }
+
+      ctx.fillStyle = flashError > 0 ? '#1a0005' : '#000000';
       if (flashError > 0) flashError--;
       ctx.fillRect(0, 0, width, height);
 
-      // Generar nuevos objetivos
+      // Generar objetivos
       if (timestamp - lastSpawn > spawnRate || targets.length === 0) {
         spawnTarget();
         lastSpawn = timestamp;
       }
 
-      // Dibujar y actualizar objetivos
-      ctx.strokeStyle = '#00ff41';
-      ctx.fillStyle = '#00ff41';
-      ctx.lineWidth = 2;
-
+      // Actualizar y dibujar objetivos
       for (let i = targets.length - 1; i >= 0; i--) {
         const t = targets[i];
         t.r -= t.shrinkSpeed;
 
-        if (t.r <= 4) {
-          // Si un punto desaparece sin dispararle, se reinicia la racha
+        if (t.r <= 3) {
           resetRun();
           break;
         }
 
-        // Anillo exterior
+        ctx.strokeStyle = t.color;
+        ctx.fillStyle = t.color;
+        ctx.lineWidth = t.isBonus ? 3 : 2;
+
         ctx.beginPath();
         ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Punto central
         ctx.beginPath();
         ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Partículas de impacto
+      // Dibujar partículas
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.life -= 0.05;
+        p.life -= 0.04;
         if (p.life <= 0) {
           particles.splice(i, 1);
           continue;
         }
+        ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 3, 3);
       }
 
-      // Mira telescópica en PC
+      // Dibujar textos flotantes de puntuación
+      ctx.font = 'bold 14px Inter';
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 1;
+        ft.life -= 0.03;
+        if (ft.life <= 0) {
+          floatingTexts.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = `rgba(0, 255, 65, ${ft.life})`;
+        ctx.fillText(ft.text, ft.x, ft.y);
+      }
+
+      // Mira en pantalla
       if (pointer.x > 0 && pointer.y > 0) {
-        ctx.strokeStyle = 'rgba(0, 255, 65, 0.75)';
+        ctx.strokeStyle = 'rgba(0, 255, 65, 0.8)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, 16, 0, Math.PI * 2);
-        ctx.moveTo(pointer.x - 24, pointer.y);
-        ctx.lineTo(pointer.x + 24, pointer.y);
-        ctx.moveTo(pointer.x, pointer.y - 24);
-        ctx.lineTo(pointer.x, pointer.y + 24);
+        ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2);
+        ctx.moveTo(pointer.x - 20, pointer.y);
+        ctx.lineTo(pointer.x + 20, pointer.y);
+        ctx.moveTo(pointer.x, pointer.y - 20);
+        ctx.lineTo(pointer.x, pointer.y + 20);
         ctx.stroke();
       }
 
+      ctx.restore();
       requestAnimationFrame(loop);
     }
 
