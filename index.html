@@ -1,113 +1,321 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Walkie / AirDrop P2P Privado</title>
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; color: #333; }
-        .card { background: #f4f4f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        #chat { border: 1px solid #ccc; height: 200px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 4px; }
-        input, button { padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
-        input { width: 65%; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        button:disabled, input:disabled { background: #e0e0e0; cursor: not-allowed; }
-        .code-box { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #007bff; margin: 10px 0; }
-        .status-disconnected { color: #d9534f; font-weight: bold; }
-        .status-connected { color: #5cb85c; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoidGames</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --fg: #00ff41;
+      --dim: #008f11;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 1rem;
+      overflow-x: hidden;
+    }
+
+    /* Filtro CRT */
+    body.crt-active::after {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+      z-index: 999;
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+
+    body.crt-active { text-shadow: 0 0 4px var(--dim); }
+
+    .divider {
+      border-top: 2px dashed var(--fg);
+      border-bottom: 2px dashed var(--fg);
+      padding: 0.75rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--fg);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .icon-btn:hover { border-color: var(--fg); }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 0;
+      gap: 1rem;
+    }
+
+    .game-card {
+      width: 100%;
+      max-width: 480px;
+      border: 1px solid var(--fg);
+      padding: 1rem;
+      text-decoration: none;
+      color: var(--fg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .game-card:hover {
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    .game-info h2 { font-size: 1.2rem; margin-bottom: 0.25rem; }
+    .game-info p { font-size: 0.85rem; opacity: 0.85; }
+
+    footer {
+      border-top: 2px dashed var(--fg);
+      border-bottom: 2px dashed var(--fg);
+      padding: 0.75rem 0;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    /* Modales */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-box {
+      border: 2px solid var(--fg);
+      background: var(--bg);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--fg);
+      padding-bottom: 0.5rem;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    button.toggle {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--fg);
+      padding: 0.35rem 0.75rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    button.toggle.active {
+      background: var(--fg);
+      color: var(--bg);
+      font-weight: 700;
+    }
+  </style>
 </head>
-<body>
+<body class="crt-active">
 
-    <h2>Conexión P2P Segura (WebRTC + Trystero)</h2>
-    
-    <div class="card">
-        <h3>Tu código de sala privado:</h3>
-        <div class="code-box" id="displaySala">Generando...</div>
-        <p>Pásale este enlace o código a la otra persona para que se conecte contigo.</p>
+  <header class="divider">
+    <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
+    <span>Void Games</span>
+    <button class="icon-btn" id="btn-records" title="Récords">★</button>
+  </header>
+
+  <main id="game-list">
+    <p>Cargando sistema...</p>
+  </main>
+
+  <footer>
+    Licencia AGPL v3
+  </footer>
+
+  <!-- Modal Ajustes -->
+  <div class="modal" id="modal-settings">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>AJUSTES</h3>
+        <button class="icon-btn" onclick="closeModals()">✕</button>
+      </div>
+      <div class="setting-row">
+        <span>Filtro CRT</span>
+        <button class="toggle active" id="toggle-crt">ON</button>
+      </div>
+      <div class="setting-row">
+        <span>Música Arcade (Synth)</span>
+        <button class="toggle" id="toggle-music">OFF</button>
+      </div>
     </div>
+  </div>
 
-    <div class="card">
-        <p>Estado de la red: <span id="status" class="status-disconnected">Esperando conexión...</span></p>
-        
-        <div id="chat"></div>
-        
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="messageInput" placeholder="Escribe un mensaje..." disabled>
-            <button id="sendBtn" onclick="sendMessage()" disabled>Enviar</button>
-        </div>
+  <!-- Modal Récords -->
+  <div class="modal" id="modal-records">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>RÉCORDS (M.SCORE)</h3>
+        <button class="icon-btn" onclick="closeModals()">✕</button>
+      </div>
+      <div id="records-list"></div>
     </div>
+  </div>
 
-    <!-- Importación limpia y directa mediante ESM CDN -->
-    <script type="module">
-        import { joinRoom } from 'https://esm.run/trystero';
+  <script>
+    let gamesData = [];
 
-        // 1. Generador de código: Letra-Número-Número-Número-Letra (ej: A-365-Y)
-        function generarCodigoSala() {
-            const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-            const numeros = '0123456789';
-            const rChar = (str) => str[Math.floor(Math.random() * str.length)];
-            const rNum = (str) => str[Math.floor(Math.random() * str.length)];
-            
-            return `${rChar(letras)}-${rNum(numeros)}${rNum(numeros)}${rNum(numeros)}-${rChar(letras)}`;
-        }
-
-        // 2. Gestionar código de sala por URL
-        const urlParams = new URLSearchParams(window.location.search);
-        let codigoSala = urlParams.get('sala');
-
-        if (!codigoSala) {
-            codigoSala = generarCodigoSala();
-            window.history.replaceState({}, '', `?sala=${codigoSala}`);
-        }
-
-        document.getElementById('displaySala').innerText = codigoSala;
-
-        // 3. Conexión P2P con Trystero
-        const config = { appId: 'mi-app-p2p-privada-2026' };
-        const room = joinRoom(config, `sala-${codigoSala}`);
-
-        const statusEl = document.getElementById('status');
-        const chatEl = document.getElementById('chat');
-        const inputEl = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-
-        const [sendData, getData] = room.makeDataChannel('chat');
-
-        room.onPeerJoin(peerId => {
-            statusEl.innerText = `¡Conectado directamente (P2P)!`;
-            statusEl.className = 'status-connected';
-            inputEl.disabled = false;
-            sendBtn.disabled = false;
-            appendLog('Sistema', '¡La otra persona se ha unido a la sala!');
+    // Parser minimalista para games.toml
+    function parseTomlGames(text) {
+      const blocks = text.split('[[games]]').slice(1);
+      return blocks.map(block => {
+        const game = {};
+        block.split('\n').forEach(line => {
+          const match = line.match(/^\s*([a-zA-Z0-9_]+)\s*=\s*"(.*)"\s*$/);
+          if (match) game[match[1]] = match[2];
         });
+        return game;
+      }).filter(g => g.id && g.path);
+    }
 
-        room.onPeerLeave(peerId => {
-            statusEl.innerText = 'La otra persona se desconectó.';
-            statusEl.className = 'status-disconnected';
-            inputEl.disabled = true;
-            sendBtn.disabled = true;
-            appendLog('Sistema', 'El usuario ha abandonado la sesión.');
+    async function loadGames() {
+      const container = document.getElementById('game-list');
+      try {
+        const res = await fetch('games.toml');
+        const text = await res.text();
+        gamesData = parseTomlGames(text);
+
+        container.innerHTML = '';
+        gamesData.forEach(game => {
+          const a = document.createElement('a');
+          a.href = game.path;
+          a.className = 'game-card';
+          a.innerHTML = `
+            <div class="game-info">
+              <h2>> ${game.title}</h2>
+              <p>${game.description || ''}</p>
+            </div>
+            <span>[JUGAR]</span>
+          `;
+          container.appendChild(a);
         });
+      } catch (e) {
+        container.innerHTML = '<p>Error cargando games.toml. Ejecuta en un servidor local.</p>';
+      }
+    }
 
-        getData((data, peerId) => {
-            appendLog('Compañero', data);
-        });
+    // Gestión de Ajustes y CRT
+    const crtBtn = document.getElementById('toggle-crt');
+    const savedCrt = localStorage.getItem('voidgames_crt');
+    if (savedCrt === 'false') {
+      document.body.classList.remove('crt-active');
+      crtBtn.classList.remove('active');
+      crtBtn.textContent = 'OFF';
+    }
 
-        window.sendMessage = () => {
-            const text = inputEl.value;
-            if (!text) return;
+    crtBtn.addEventListener('click', () => {
+      const isActive = document.body.classList.toggle('crt-active');
+      crtBtn.classList.toggle('active', isActive);
+      crtBtn.textContent = isActive ? 'ON' : 'OFF';
+      localStorage.setItem('voidgames_crt', isActive);
+    });
 
-            sendData(text);
-            appendLog('Tú', text);
-            inputEl.value = '';
-        };
+    // Sintetizador Chiptune Offline (Web Audio API)
+    let audioCtx = null;
+    let musicInterval = null;
+    const musicBtn = document.getElementById('toggle-music');
+    const notes = [110, 110, 146.83, 130.81, 164.81, 146.83, 130.81, 98]; // Bajo retro en La menor
+    let step = 0;
 
-        function appendLog(sender, text) {
-            chatEl.innerHTML += `<div><strong>${sender}:</strong> ${text}</div>`;
-            chatEl.scrollTop = chatEl.scrollHeight;
-        }
-    </script>
+    function playStep() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.19);
+      step++;
+    }
+
+    musicBtn.addEventListener('click', () => {
+      if (!musicInterval) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        musicInterval = setInterval(playStep, 220);
+        musicBtn.classList.add('active');
+        musicBtn.textContent = 'ON';
+      } else {
+        clearInterval(musicInterval);
+        musicInterval = null;
+        musicBtn.classList.remove('active');
+        musicBtn.textContent = 'OFF';
+      }
+    });
+
+    // Modales
+    document.getElementById('btn-settings').onclick = () => {
+      document.getElementById('modal-settings').classList.add('open');
+    };
+
+    document.getElementById('btn-records').onclick = () => {
+      const list = document.getElementById('records-list');
+      list.innerHTML = gamesData.map(g => {
+        const best = localStorage.getItem(`voidgames_mscore_${g.id}`) || 0;
+        return `<div class="setting-row"><span>${g.title}</span><strong>${best} PTS</strong></div>`;
+      }).join('') || '<p>Sin juegos registrados.</p>';
+      document.getElementById('modal-records').classList.add('open');
+    };
+
+    function closeModals() {
+      document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+    }
+
+    loadGames();
+  </script>
 </body>
 </html>
