@@ -5,3 +5,9 @@ id = "shootly"
 title = "Shootly"
 description = "Apunta y dispara a los objetivos antes de que desaparezcan."
 path = "games/shootly/index.html"
+
+[[games]]
+id = "blocks"
+title = "Blocks"
+description = "Encaja las piezas, completa líneas y supera tu récord."
+path = "games/blocks/index.html"
