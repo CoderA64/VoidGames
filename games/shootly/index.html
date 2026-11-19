@@ -37,7 +37,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Cabecera Minimalista */
     header {
       width: 100%;
       padding: 1rem 1.25rem;
@@ -111,7 +110,6 @@
       padding: 0.3rem 0.65rem;
       border-radius: 99px;
       font-variant-numeric: tabular-nums;
-      transition: transform 0.15s ease;
     }
 
     canvas {
@@ -120,7 +118,24 @@
       height: 100%;
       display: block;
       touch-action: manipulation;
-      cursor: crosshair;
+      cursor: pointer;
+    }
+
+    .controls-hint {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: rgba(19, 19, 23, 0.75);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -142,6 +157,7 @@
   </header>
 
   <canvas id="game"></canvas>
+  <div class="controls-hint">Toque, Clic, Espacio o Flechas para disparar</div>
 
   <script>
     const canvas = document.getElementById('game');
@@ -157,15 +173,15 @@
     mscoreEl.textContent = mscore;
 
     let width, height;
-    let targets = [];
+    let angleX = 0;
+    let angleY = 0;
+    let speedX = 0.03;
+    let speedY = 0.02;
     let ripples = [];
     let floatingTexts = [];
-    let pointer = { x: -100, y: -100, active: false };
-    let lastSpawn = 0;
-    let spawnRate = 1150;
     let missFlash = 0;
+    let centerPulse = 0;
 
-    // Audio limpio y suave con rampa de ganancia (sin chasquidos)
     let audioCtx = null;
     function playTone(freqStart, freqEnd, duration, vol = 0.05) {
       if (localStorage.getItem('voidgames_music') === 'false') return;
@@ -201,24 +217,8 @@
     window.addEventListener('resize', resize);
     resize();
 
-    function spawnTarget() {
-      const margin = 56;
-      const isBonus = Math.random() < 0.16;
-      const radius = isBonus ? 18 : 26;
-
-      targets.push({
-        x: margin + Math.random() * Math.max(20, width - margin * 2),
-        y: margin + Math.random() * Math.max(20, height - margin * 2),
-        r: radius,
-        maxR: radius,
-        shrinkSpeed: (isBonus ? 0.19 : 0.11) + Math.min(score * 0.0025, 0.18),
-        isBonus,
-        color: isBonus ? '#f43f5e' : '#34d399'
-      });
-    }
-
     function addRipple(x, y, color) {
-      ripples.push({ x, y, r: 8, alpha: 0.7, color });
+      ripples.push({ x, y, r: 10, alpha: 0.8, color });
     }
 
     function addFloatingText(text, x, y, color) {
@@ -226,81 +226,82 @@
     }
 
     function resetRun() {
-      if (score > 0 || combo > 1) {
-        missFlash = 0.22;
-        playTone(180, 75, 0.25, 0.07);
-      }
+      missFlash = 0.25;
+      playTone(160, 60, 0.28, 0.08);
       score = 0;
       combo = 1;
-      spawnRate = 1150;
-      targets = [];
+      speedX = 0.03;
+      speedY = 0.02;
       scoreEl.textContent = score;
       comboEl.textContent = '1x';
     }
 
-    function shoot(x, y) {
-      pointer.x = x;
-      pointer.y = y;
+    function shoot() {
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radiusX = Math.min(width, height) * 0.32;
+      const radiusY = Math.min(width, height) * 0.24;
 
-      let hit = false;
-      for (let i = targets.length - 1; i >= 0; i--) {
-        const t = targets[i];
-        const dist = Math.hypot(x - t.x, y - t.y);
+      const targetX = centerX + Math.sin(angleX) * radiusX;
+      const targetY = centerY + Math.cos(angleY) * radiusY;
 
-        if (dist <= t.r + 12) {
-          targets.splice(i, 1);
-          addRipple(t.x, t.y, t.color);
+      // Distancia de la diana al centro exacto
+      const distToCenter = Math.hypot(targetX - centerX, targetY - centerY);
+      centerPulse = 1; // Pulso visual de disparo en la mira central
 
-          const points = (t.isBonus ? 3 : 1) * combo;
-          score += points;
-          addFloatingText(`+${points}`, t.x, t.y - 10, t.color);
+      if (distToCenter <= 35) {
+        addRipple(targetX, targetY, '#34d399');
+        
+        const points = 1 * combo;
+        score += points;
+        addFloatingText(`+${points}`, targetX, targetY - 15, '#34d399');
 
-          combo = Math.min(combo + 1, 10);
-          scoreEl.textContent = score;
-          comboEl.textContent = `${combo}x`;
+        combo = Math.min(combo + 1, 15);
+        scoreEl.textContent = score;
+        comboEl.textContent = `${combo}x`;
 
-          if (score > mscore) {
-            mscore = score;
-            mscoreEl.textContent = mscore;
-            localStorage.setItem(STORAGE_KEY, mscore);
-          }
-
-          spawnRate = Math.max(420, 1150 - score * 14);
-          playTone(t.isBonus ? 740 : 520, t.isBonus ? 1100 : 780, 0.14, 0.05);
-          hit = true;
-          break;
+        if (score > mscore) {
+          mscore = score;
+          mscoreEl.textContent = mscore;
+          localStorage.setItem(STORAGE_KEY, mscore);
         }
-      }
 
-      if (!hit) {
+        speedX += 0.0015;
+        speedY += 0.0012;
+
+        playTone(600, 950, 0.12, 0.05);
+      } else {
         resetRun();
       }
     }
 
-    canvas.addEventListener('pointermove', e => {
-      if (e.pointerType === 'mouse') {
-        const rect = canvas.getBoundingClientRect();
-        pointer.x = e.clientX - rect.left;
-        pointer.y = e.clientY - rect.top;
-        pointer.active = true;
+    // Disparo con ratón o toque táctil
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('header')) return;
+      shoot();
+    });
+
+    // Disparo con cruceta/flechas del teclado, Espacio o Enter
+    const triggerKeys = new Set([
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'Space', 'Enter', 'KeyW', 'KeyA', 'KeyS', 'KeyD'
+    ]);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return; // Evita disparos accidentales al mantener pulsada la tecla
+      if (triggerKeys.has(e.code)) {
+        e.preventDefault();
+        shoot();
+      } else if (e.code === 'Escape') {
+        window.location.href = '../../index.html';
       }
     });
 
-    canvas.addEventListener('pointerleave', () => {
-      pointer.active = false;
-    });
-
-    canvas.addEventListener('pointerdown', e => {
-      const rect = canvas.getBoundingClientRect();
-      shoot(e.clientX - rect.left, e.clientY - rect.top);
-    });
-
-    function loop(timestamp) {
-      // Fondo base
+    function loop() {
       ctx.fillStyle = '#0a0a0c';
       ctx.fillRect(0, 0, width, height);
 
-      // Cuadrícula de puntos sutil de fondo
+      // Cuadrícula sutil de fondo
       ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
       const step = 36;
       for (let gx = step; gx < width; gx += step) {
@@ -316,44 +317,54 @@
         missFlash *= 0.88;
       }
 
-      // Aparición de objetivos
-      if (timestamp - lastSpawn > spawnRate || targets.length === 0) {
-        spawnTarget();
-        lastSpawn = timestamp;
-      }
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radiusX = Math.min(width, height) * 0.32;
+      const radiusY = Math.min(width, height) * 0.24;
 
-      // Dibujar objetivos
-      for (let i = targets.length - 1; i >= 0; i--) {
-        const t = targets[i];
-        t.r -= t.shrinkSpeed;
+      angleX += speedX;
+      angleY += speedY;
 
-        if (t.r <= 4) {
-          resetRun();
-          break;
-        }
+      const targetX = centerX + Math.sin(angleX) * radiusX;
+      const targetY = centerY + Math.cos(angleY) * radiusY;
 
-        // Relleno translúcido suave
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
-        ctx.fillStyle = t.isBonus ? 'rgba(244, 63, 94, 0.14)' : 'rgba(52, 211, 153, 0.12)';
-        ctx.fill();
+      // Mira fija central con pulso al disparar
+      if (centerPulse > 0.01) centerPulse *= 0.85;
+      const crosshairRadius = 28 + centerPulse * 6;
 
-        // Aro exterior
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = t.color;
-        ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `rgba(244, 244, 246, ${0.25 + centerPulse * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, crosshairRadius, 0, Math.PI * 2);
+      ctx.stroke();
 
-        // Núcleo central
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = t.color;
-        ctx.fill();
-      }
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(244, 244, 246, 0.4)';
+      ctx.fill();
 
-      // Ondas de impacto (Ripples)
+      // Diana móvil
+      const distCenter = Math.hypot(targetX - centerX, targetY - centerY);
+      const isClose = distCenter <= 35;
+
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 20, 0, Math.PI * 2);
+      ctx.fillStyle = isClose ? 'rgba(52, 211, 153, 0.25)' : 'rgba(244, 244, 246, 0.08)';
+      ctx.fill();
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = isClose ? '#34d399' : '#f4f4f6';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = isClose ? '#34d399' : '#f4f4f6';
+      ctx.fill();
+
+      // Ondas expansivas de impacto
       for (let i = ripples.length - 1; i >= 0; i--) {
         const rp = ripples[i];
-        rp.r += 2.4;
+        rp.r += 2.2;
         rp.alpha -= 0.035;
         if (rp.alpha <= 0) {
           ripples.splice(i, 1);
@@ -369,7 +380,7 @@
         ctx.restore();
       }
 
-      // Textos flotantes de puntos
+      // Textos flotantes
       ctx.font = '600 13px Inter, sans-serif';
       ctx.textAlign = 'center';
       for (let i = floatingTexts.length - 1; i >= 0; i--) {
@@ -387,19 +398,11 @@
         ctx.restore();
       }
 
-      // Mira minimalista en escritorio
-      if (pointer.active) {
-        ctx.strokeStyle = 'rgba(244, 244, 246, 0.35)';
-        ctx.lineWidth = 1.25;
-        ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, 14, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
       requestAnimationFrame(loop);
     }
 
     requestAnimationFrame(loop);
   </script>
 </body>
-</html>
+  </html>
+  
