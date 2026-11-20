@@ -14,8 +14,10 @@
       --border: #24242c;
       --text-primary: #f4f4f6;
       --text-secondary: #8e8e98;
-      --accent: #34d399;
-      --accent-dim: rgba(52, 211, 153, 0.12);
+      --accent: #AD2831;
+      --accent-hover: #c4303a;
+      --accent-dim: rgba(173, 40, 49, 0.18);
+      --accent-soft-text: #f87171;
       --radius: 14px;
     }
 
@@ -62,7 +64,7 @@
       height: 8px;
       border-radius: 50%;
       background-color: var(--accent);
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 0 12px var(--accent);
     }
 
     .icon-btn {
@@ -83,7 +85,7 @@
     .icon-btn:hover {
       background: var(--bg-surface-hover);
       color: var(--text-primary);
-      border-color: #363642;
+      border-color: var(--accent);
     }
 
     main {
@@ -118,7 +120,7 @@
 
     .game-card:hover {
       background: var(--bg-surface-hover);
-      border-color: #383844;
+      border-color: var(--accent);
       transform: translateY(-2px);
     }
 
@@ -140,7 +142,7 @@
 
     .play-pill {
       background: var(--accent-dim);
-      color: var(--accent);
+      color: var(--accent-soft-text);
       font-size: 0.8rem;
       font-weight: 600;
       padding: 0.45rem 0.9rem;
@@ -152,7 +154,7 @@
 
     .game-card:hover .play-pill {
       background: var(--accent);
-      color: #051b11;
+      color: #ffffff;
     }
 
     footer {
@@ -170,7 +172,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.78);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       z-index: 1000;
@@ -193,7 +195,7 @@
       padding: 1.75rem;
       width: 100%;
       max-width: 380px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     }
 
     .modal-header {
@@ -273,7 +275,7 @@
 
     .switch-btn.active::after {
       transform: translateX(22px);
-      background: #051b11;
+      background: #ffffff;
     }
 
     .welcome-title {
@@ -315,13 +317,18 @@
 
     .btn.primary {
       background: var(--accent);
-      color: #051b11;
+      color: #ffffff;
       border-color: var(--accent);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
     }
 
     .score-badge {
       font-weight: 600;
-      color: var(--accent);
+      color: var(--accent-soft-text);
       font-variant-numeric: tabular-nums;
     }
   </style>
@@ -394,7 +401,7 @@
     let gamesData = [];
     let audioCtx = null;
     let musicInterval = null;
-    const notes = [261.63, 329.63, 392.00, 493.88, 392.00, 329.63]; 
+    const notes = [261.63, 329.63, 392.00, 493.88, 392.00, 329.63];
     let step = 0;
 
     const musicBtn = document.getElementById('toggle-music');
@@ -422,7 +429,7 @@
         gamesData.forEach(game => {
           const best = localStorage.getItem(`voidgames_mscore_${game.id}`);
           const scoreSub = best ? ` · Récord: ${best}` : '';
-          
+
           const a = document.createElement('a');
           a.href = game.path;
           a.className = 'game-card';
@@ -440,23 +447,21 @@
       }
     }
 
-    // Audio ambiental con rampa de ganancia limpia (evita chasquidos y ruido roto)
     function playAmbientNote() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      
+
       osc.type = 'sine';
       osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
-      
-      // Envolvente limpia: subida y bajada graduales de volumen
+
       gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
       gain.gain.linearRampToValueAtTime(0.025, audioCtx.currentTime + 0.6);
       gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 1.8);
-      
+
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      
+
       osc.start(audioCtx.currentTime);
       osc.stop(audioCtx.currentTime + 1.9);
       step++;
@@ -551,4 +556,5 @@
     loadGames();
   </script>
 </body>
-</html>
+  </html>
+  
